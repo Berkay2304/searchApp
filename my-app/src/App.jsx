@@ -1,206 +1,130 @@
-// App.jsx
 import { useEffect, useState } from 'react';
+import axios from 'axios';
 import './App.css';
 
 function App() {
-  const [domains, setDomains] = useState({});
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const [search, setSearch] = useState("");
-  const [showForm, setShowForm] = useState(false);
-  const [formDomain, setFormDomain] = useState("");
-  const [formSubdomains, setFormSubdomains] = useState("");
-  const [formError, setFormError] = useState(null);
-  const [formSuccess, setFormSuccess] = useState(null);
-  const [submitting, setSubmitting] = useState(false);
-  const [actionMessage, setActionMessage] = useState(null);
+  const [domains, setDomains] = useState([]);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [domainInput, setDomainInput] = useState("");
+  const [subdomainsInput, setSubdomainsInput] = useState("");
 
-  const fetchDomains = () => {
-    setLoading(true);
-    fetch('http://localhost:3000/domains')
-      .then(res => {
-        if (!res.ok) throw new Error('Sunucudan veri alınamadı');
-        return res.json();
-      })
-      .then(data => {
-        setDomains(data);
-        setLoading(false);
-      })
-      .catch(err => {
-        setError(err.message);
-        setLoading(false);
-      });
-  };
+  const API_URL = "http://localhost:3000"; // backend adresin
 
+  // Verileri yükle
   useEffect(() => {
     fetchDomains();
   }, []);
 
-  const filteredEntries = Object.entries(domains)
-    .map(([domain, subdomains]) => {
-      if (domain.toLowerCase().includes(search.toLowerCase())) {
-        return [domain, subdomains];
-      }
-      const filteredSubs = subdomains.filter(sub =>
-        sub.toLowerCase().includes(search.toLowerCase())
-      );
-      if (filteredSubs.length > 0) {
-        return [domain, filteredSubs];
-      }
-      return null;
-    })
-    .filter(Boolean);
-
-  const handleFormSubmit = async (e) => {
-    e.preventDefault();
-    setFormError(null);
-    setFormSuccess(null);
-    setSubmitting(true);
-
-    const domain = formDomain.trim();
-    const subdomains = formSubdomains.split(',').map(s => s.trim()).filter(Boolean);
-    if (!domain || subdomains.length === 0) {
-      setFormError('Lütfen üst domain ve en az bir alt domain girin.');
-      setSubmitting(false);
-      return;
+  const fetchDomains = async () => {
+    try {
+      const response = await axios.get(`${API_URL}/domains`);
+      setDomains(response.data);
+    } catch (error) {
+      console.error("Veri çekme hatası:", error);
     }
+  };
+
+  const handleAddDomain = async () => {
+    if (!domainInput.trim()) return;
+    const subdomains = subdomainsInput
+      .split(",")
+      .map(s => s.trim())
+      .filter(s => s);
+
+    // Var olan domain mi kontrol et
+    const existing = domains.find(d => d.domain === domainInput);
 
     try {
-      if (!domains[domain]) {
-        const res = await fetch('http://localhost:3000/domains', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ [domain]: subdomains })
+      if (existing) {
+        // Mevcut domain'e subdomain ekle
+        await axios.patch(`${API_URL}/domains/${existing._id}/add-subdomains`, {
+          newSubdomains: subdomains
         });
-        if (!res.ok) throw new Error('Domain eklenemedi');
-        setFormSuccess('Yeni domain ve alt domainler eklendi!');
       } else {
-        let added = 0;
-        for (let sub of subdomains) {
-          if (!domains[domain].includes(sub)) {
-            const res = await fetch(`http://localhost:3000/domains/${encodeURIComponent(domain)}/subdomains`, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ subdomain: sub })
-            });
-            if (res.ok) added++;
-          }
-        }
-        if (added > 0) {
-          setFormSuccess('Yeni alt domain(ler) eklendi!');
-        } else {
-          setFormError('Girilen alt domainler zaten mevcut.');
-        }
+        // Yeni domain oluştur
+        await axios.post(`${API_URL}/domains`, {
+          domain: domainInput,
+          subdomains
+        });
       }
-      setFormDomain("");
-      setFormSubdomains("");
-      fetchDomains();
-      setShowForm(false);
-    } catch (err) {
-      setFormError(err.message);
-    } finally {
-      setSubmitting(false);
+
+      setDomainInput("");
+      setSubdomainsInput("");
+      fetchDomains(); // Güncelle
+    } catch (error) {
+      console.error("Ekleme hatası:", error);
     }
   };
 
-  const handleDeleteDomain = async (domain) => {
-    if (!window.confirm(`${domain} ve tüm alt domainleri silinsin mi?`)) return;
-    setActionMessage(null);
+  const handleDeleteDomain = async (id) => {
     try {
-      const res = await fetch(`http://localhost:3000/domains/${encodeURIComponent(domain)}`, {
-        method: 'DELETE'
-      });
-      if (!res.ok) throw new Error('Domain silinemedi');
-      setActionMessage('Domain ve alt domainler silindi.');
+      await axios.delete(`${API_URL}/domains/${id}`);
       fetchDomains();
-    } catch (err) {
-      setActionMessage('Hata: ' + err.message);
+    } catch (error) {
+      console.error("Domain silme hatası:", error);
     }
   };
 
-  const handleDeleteSubdomain = async (domain, subdomain) => {
-    if (!window.confirm(`${subdomain} silinsin mi?`)) return;
-    setActionMessage(null);
+  const handleDeleteSubdomain = async (id, subdomainToRemove) => {
     try {
-      const res = await fetch(`http://localhost:3000/domains/${encodeURIComponent(domain)}/subdomains/${encodeURIComponent(subdomain)}`, {
-        method: 'DELETE'
+      await axios.patch(`${API_URL}/domains/${id}/remove-subdomain`, {
+        subdomainToRemove
       });
-      if (!res.ok) throw new Error('Alt domain silinemedi');
-      setActionMessage('Alt domain silindi.');
       fetchDomains();
-    } catch (err) {
-      setActionMessage('Hata: ' + err.message);
+    } catch (error) {
+      console.error("Subdomain silme hatası:", error);
     }
   };
 
-  if (loading) return <div>Yükleniyor...</div>;
-  if (error) return <div>Hata: {error}</div>;
+  const filteredDomains = domains.filter(d =>
+    d.domain.toLowerCase().includes(searchTerm.toLowerCase())
+  );
 
   return (
-    <div className="container">
-      <h1 className="title">Domain Listesi</h1>
+    <div className="app-container">
+      <h1>Domain Yönetimi</h1>
 
-      <div className="search-bar">
-        <span className="search-icon">🔍</span>
+      <div className="search-add-bar">
         <input
           type="text"
           placeholder="Ara..."
-          value={search}
-          onChange={e => setSearch(e.target.value)}
-          className="search-input"
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
         />
-        <button className="btn btn-toggle" onClick={() => setShowForm(f => !f)}>
-          {showForm ? 'Kapat' : 'Ekle'}
-        </button>
+
+        <input
+          type="text"
+          placeholder="Üst domain (örn: example.com)"
+          value={domainInput}
+          onChange={(e) => setDomainInput(e.target.value)}
+        />
+        <input
+          type="text"
+          placeholder="Alt domainler (virgülle ayır)"
+          value={subdomainsInput}
+          onChange={(e) => setSubdomainsInput(e.target.value)}
+        />
+        <button onClick={handleAddDomain}>Ekle</button>
       </div>
 
-      {showForm && (
-        <form onSubmit={handleFormSubmit} className="form-box">
-          <label>Üst Domain:</label>
-          <input
-            type="text"
-            value={formDomain}
-            onChange={e => setFormDomain(e.target.value)}
-            placeholder="ornek.com"
-            disabled={submitting}
-          />
-          <label>Alt Domain(ler):</label>
-          <input
-            type="text"
-            value={formSubdomains}
-            onChange={e => setFormSubdomains(e.target.value)}
-            placeholder="sub1.ornek.com,sub2.ornek.com"
-            disabled={submitting}
-          />
-          <button type="submit" disabled={submitting} className="btn btn-toggle">
-            {submitting ? 'Ekleniyor...' : 'Kaydet'}
-          </button>
-          {formError && <div style={{ color: 'red', marginTop: 8 }}>{formError}</div>}
-          {formSuccess && <div style={{ color: 'green', marginTop: 8 }}>{formSuccess}</div>}
-        </form>
-      )}
-
-      {actionMessage && <div style={{ marginBottom: 8, color: actionMessage.startsWith('Hata') ? 'red' : 'green' }}>{actionMessage}</div>}
-
-      <div className="card-list">
-        {filteredEntries.length === 0 && <div className="no-result">Sonuç bulunamadı.</div>}
-        {filteredEntries.map(([domain, subdomains]) => (
-          <div key={domain} className="domain-card">
-            <div className="domain-title">
-              {domain}
-              <button className="btn btn-danger" onClick={() => handleDeleteDomain(domain)}>Sil</button>
+      <ul className="domain-list">
+        {filteredDomains.map((d) => (
+          <li key={d._id} className="domain-item">
+            <div className="domain-header">
+              <strong>{d.domain}</strong>
+              <button className="delete" onClick={() => handleDeleteDomain(d._id)}>Sil</button>
             </div>
             <ul className="subdomain-list">
-              {subdomains.map((sub, i) => (
-                <li key={i} className="subdomain-item">
-                  {sub}
-                  <button className="btn btn-danger" onClick={() => handleDeleteSubdomain(domain, sub)}>Sil</button>
+              {d.subdomains.map((s, idx) => (
+                <li key={idx}>
+                  {s}
+                  <button className="delete-sub" onClick={() => handleDeleteSubdomain(d._id, s)}>Sil</button>
                 </li>
               ))}
             </ul>
-          </div>
+          </li>
         ))}
-      </div>
+      </ul>
     </div>
   );
 }
