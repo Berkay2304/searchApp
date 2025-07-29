@@ -8,7 +8,7 @@ function App() {
   const [domainInput, setDomainInput] = useState("");
   const [subdomainsInput, setSubdomainsInput] = useState("");
 
-  const API_URL = "http://localhost:3000"; // backend adresin
+  const API_URL = "https://searchappbackend.onrender.com"; // backend adresin
 
   // Verileri yükle
   useEffect(() => {
