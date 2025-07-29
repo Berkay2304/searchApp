@@ -9,6 +9,8 @@ function App() {
   // Modal/form state
   const [showForm, setShowForm] = useState(false);
   const [newDomain, setNewDomain] = useState('');
+  const [selectDomain, setSelectDomain] = useState('');
+  const [isAddingNewDomain, setIsAddingNewDomain] = useState(false);
   const [newSubdomains, setNewSubdomains] = useState('');
   const [formError, setFormError] = useState('');
 
@@ -28,34 +30,48 @@ function App() {
     })
     .filter(Boolean);
 
-  // Yeni domain ekleme fonksiyonu
+  // Yeni domain veya alt domain ekleme fonksiyonu
   const handleAddDomain = (e) => {
     e.preventDefault();
     setFormError('');
-    const domain = newDomain.trim();
-    if (!domain) {
-      setFormError('Alan adı boş olamaz.');
-      return;
-    }
-    if (domains[domain]) {
-      setFormError('Bu alan adı zaten mevcut.');
-      return;
+    let domain = '';
+    if (isAddingNewDomain) {
+      domain = newDomain.trim();
+      if (!domain) {
+        setFormError('Alan adı boş olamaz.');
+        return;
+      }
+    } else {
+      domain = selectDomain;
+      if (!domain) {
+        setFormError('Bir üst domain seçiniz veya ekleyiniz.');
+        return;
+      }
     }
     // Alt domainleri virgül veya satır ile ayır
     const subdomains = newSubdomains
-      .split(/[,\n]/)
+      .split(/[\n,]/)
       .map((s) => s.trim())
       .filter((s) => s.length > 0);
     if (subdomains.length === 0) {
       setFormError('En az bir alt alan adı giriniz.');
       return;
     }
-    setDomains({
-      ...domains,
-      [domain]: subdomains,
-    });
+    let newDomains = { ...domains };
+    if (newDomains[domain]) {
+      // Varsa, alt domainleri ekle (tekrar edenleri ekleme)
+      const currentSubs = newDomains[domain];
+      const mergedSubs = Array.from(new Set([...currentSubs, ...subdomains]));
+      newDomains[domain] = mergedSubs;
+    } else {
+      // Yoksa yeni domain olarak ekle
+      newDomains[domain] = subdomains;
+    }
+    setDomains(newDomains);
     setShowForm(false);
     setNewDomain('');
+    setSelectDomain('');
+    setIsAddingNewDomain(false);
     setNewSubdomains('');
     setFormError('');
   };
@@ -104,18 +120,45 @@ function App() {
       {showForm && (
         <div className="modal-bg" style={{ position: 'fixed', top:0, left:0, width:'100vw', height:'100vh', background:'rgba(0,0,0,0.3)', display:'flex', alignItems:'center', justifyContent:'center', zIndex:1000 }}>
           <div className="modal-content" style={{ background:'#fff', padding:32, borderRadius:8, minWidth:320, boxShadow:'0 2px 16px rgba(0,0,0,0.15)' }}>
-            <h2>Yeni Domain Ekle</h2>
+            <h2>Yeni Domain veya Alt Domain Ekle</h2>
             <form onSubmit={handleAddDomain}>
               <div style={{ marginBottom: 12 }}>
-                <label>Alan Adı:</label><br />
-                <input
-                  type="text"
-                  value={newDomain}
-                  onChange={e => setNewDomain(e.target.value)}
-                  style={{ width: '100%', padding: 6, fontSize: 15 }}
-                  placeholder="ornek.com"
-                  autoFocus
-                />
+                <label>Üst Domain:</label><br />
+                {!isAddingNewDomain ? (
+                  <>
+                    <select
+                      value={selectDomain}
+                      onChange={e => {
+                        if (e.target.value === '__new__') {
+                          setIsAddingNewDomain(true);
+                          setSelectDomain('');
+                        } else {
+                          setSelectDomain(e.target.value);
+                          setNewDomain('');
+                        }
+                      }}
+                      style={{ width: '100%', padding: 6, fontSize: 15 }}
+                    >
+                      <option value="">Bir üst domain seçiniz...</option>
+                      {Object.keys(domains).map((d) => (
+                        <option key={d} value={d}>{d}</option>
+                      ))}
+                      <option value="__new__">+ Yeni domain ekle</option>
+                    </select>
+                  </>
+                ) : (
+                  <>
+                    <input
+                      type="text"
+                      value={newDomain}
+                      onChange={e => setNewDomain(e.target.value)}
+                      style={{ width: '100%', padding: 6, fontSize: 15 }}
+                      placeholder="Yeni üst domain (örnek.com)"
+                      autoFocus
+                    />
+                    <button type="button" style={{ marginTop: 6, fontSize: 13 }} onClick={() => { setIsAddingNewDomain(false); setNewDomain(''); }}>← Geri</button>
+                  </>
+                )}
               </div>
               <div style={{ marginBottom: 12 }}>
                 <label>Alt Alan Adları:</label><br />
@@ -128,7 +171,7 @@ function App() {
               </div>
               {formError && <div style={{ color: 'red', marginBottom: 8 }}>{formError}</div>}
               <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
-                <button type="button" onClick={() => setShowForm(false)} style={{ padding: '6px 14px' }}>İptal</button>
+                <button type="button" onClick={() => { setShowForm(false); setIsAddingNewDomain(false); setNewDomain(''); setSelectDomain(''); setFormError(''); setNewSubdomains(''); }} style={{ padding: '6px 14px' }}>İptal</button>
                 <button type="submit" style={{ padding: '6px 14px', background:'#007bff', color:'#fff', border:'none', borderRadius:4 }}>Kaydet</button>
               </div>
             </form>
