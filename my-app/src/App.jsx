@@ -76,9 +76,14 @@ function App() {
     }
   };
 
-  const filteredDomains = domains.filter(d =>
-    d.domain.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  // Hem domain hem subdomainlere göre filtreleme yapılıyor
+  const filteredDomains = domains.filter(d => {
+    const search = searchTerm.toLowerCase();
+    return (
+      d.domain.toLowerCase().includes(search) ||
+      d.subdomains.some(sub => sub.toLowerCase().includes(search))
+    );
+  });
 
   return (
     <div className="app-container">
