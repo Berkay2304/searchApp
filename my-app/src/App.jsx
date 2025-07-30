@@ -8,9 +8,15 @@ function App() {
   const [domainInput, setDomainInput] = useState("");
   const [subdomainsInput, setSubdomainsInput] = useState("");
 
+  // Düzenleme için eklenen state'ler
+  const [editingDomainId, setEditingDomainId] = useState(null);
+  const [editingDomainValue, setEditingDomainValue] = useState("");
+
+  const [editingSubdomainInfo, setEditingSubdomainInfo] = useState({ domainId: null, index: null });
+  const [editingSubdomainValue, setEditingSubdomainValue] = useState("");
+
   const API_URL = "https://searchappbackend.onrender.com"; // backend adresin
 
-  // Verileri yükle
   useEffect(() => {
     fetchDomains();
   }, []);
@@ -31,17 +37,14 @@ function App() {
       .map(s => s.trim())
       .filter(s => s);
 
-    // Var olan domain mi kontrol et
     const existing = domains.find(d => d.domain === domainInput);
 
     try {
       if (existing) {
-        // Mevcut domain'e subdomain ekle
         await axios.patch(`${API_URL}/domains/${existing._id}/add-subdomains`, {
           newSubdomains: subdomains
         });
       } else {
-        // Yeni domain oluştur
         await axios.post(`${API_URL}/domains`, {
           domain: domainInput,
           subdomains
@@ -50,7 +53,7 @@ function App() {
 
       setDomainInput("");
       setSubdomainsInput("");
-      fetchDomains(); // Güncelle
+      fetchDomains();
     } catch (error) {
       console.error("Ekleme hatası:", error);
     }
@@ -76,7 +79,64 @@ function App() {
     }
   };
 
-  // Hem domain hem subdomainlere göre filtreleme yapılıyor
+  // --- Düzenleme işlemleri ---
+
+  // Domain düzenlemeyi başlat
+  const startEditingDomain = (id, currentValue) => {
+    setEditingDomainId(id);
+    setEditingDomainValue(currentValue);
+  };
+
+  // Domain düzenlemeyi iptal et
+  const cancelEditingDomain = () => {
+    setEditingDomainId(null);
+    setEditingDomainValue("");
+  };
+
+  // Domain düzenlemeyi kaydet (backend güncellemesini backend tarafında yapacaksın)
+  const saveEditingDomain = async (id) => {
+    try {
+      // Backend endpoint'i kendin yazacaksın:
+      await axios.patch(`${API_URL}/domains/${id}/update-domain`, {
+        newDomain: editingDomainValue.trim()
+      });
+      setEditingDomainId(null);
+      setEditingDomainValue("");
+      fetchDomains();
+    } catch (error) {
+      console.error("Domain güncelleme hatası:", error);
+    }
+  };
+
+  // Subdomain düzenlemeyi başlat
+  const startEditingSubdomain = (domainId, index, currentValue) => {
+    setEditingSubdomainInfo({ domainId, index });
+    setEditingSubdomainValue(currentValue);
+  };
+
+  // Subdomain düzenlemeyi iptal et
+  const cancelEditingSubdomain = () => {
+    setEditingSubdomainInfo({ domainId: null, index: null });
+    setEditingSubdomainValue("");
+  };
+
+  // Subdomain düzenlemeyi kaydet
+  const saveEditingSubdomain = async (domainId, oldValue) => {
+    try {
+      // Backend tarafında bu endpoint'i yazacaksın:
+      await axios.patch(`${API_URL}/domains/${domainId}/update-subdomain`, {
+        oldSubdomain: oldValue,
+        newSubdomain: editingSubdomainValue.trim()
+      });
+      setEditingSubdomainInfo({ domainId: null, index: null });
+      setEditingSubdomainValue("");
+      fetchDomains();
+    } catch (error) {
+      console.error("Subdomain güncelleme hatası:", error);
+    }
+  };
+
+  // Filtreleme
   const filteredDomains = domains.filter(d => {
     const search = searchTerm.toLowerCase();
     return (
@@ -116,14 +176,44 @@ function App() {
         {filteredDomains.map((d) => (
           <li key={d._id} className="domain-item">
             <div className="domain-header">
-              <strong>{d.domain}</strong>
-              <button className="delete" onClick={() => handleDeleteDomain(d._id)}>Sil</button>
+              {editingDomainId === d._id ? (
+                <>
+                  <input
+                    type="text"
+                    value={editingDomainValue}
+                    onChange={(e) => setEditingDomainValue(e.target.value)}
+                  />
+                  <button onClick={() => saveEditingDomain(d._id)}>Kaydet</button>
+                  <button onClick={cancelEditingDomain}>İptal</button>
+                </>
+              ) : (
+                <>
+                  <strong>{d.domain}</strong>
+                  <button onClick={() => startEditingDomain(d._id, d.domain)}>Düzenle</button>
+                  <button className="delete" onClick={() => handleDeleteDomain(d._id)}>Sil</button>
+                </>
+              )}
             </div>
             <ul className="subdomain-list">
               {d.subdomains.map((s, idx) => (
                 <li key={idx}>
-                  {s}
-                  <button className="delete-sub" onClick={() => handleDeleteSubdomain(d._id, s)}>Sil</button>
+                  {editingSubdomainInfo.domainId === d._id && editingSubdomainInfo.index === idx ? (
+                    <>
+                      <input
+                        type="text"
+                        value={editingSubdomainValue}
+                        onChange={(e) => setEditingSubdomainValue(e.target.value)}
+                      />
+                      <button onClick={() => saveEditingSubdomain(d._id, s)}>Kaydet</button>
+                      <button onClick={cancelEditingSubdomain}>İptal</button>
+                    </>
+                  ) : (
+                    <>
+                      {s}
+                      <button onClick={() => startEditingSubdomain(d._id, idx, s)}>Düzenle</button>
+                      <button className="delete-sub" onClick={() => handleDeleteSubdomain(d._id, s)}>Sil</button>
+                    </>
+                  )}
                 </li>
               ))}
             </ul>
