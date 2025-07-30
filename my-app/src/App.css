@@ -42,11 +42,18 @@ h1 {
   border-radius: 8px;
 }
 
+/* Domain başlığı: domain adı solda, butonlar sağda yan yana */
 .domain-header {
   display: flex;
-  /* justify-content: space-between;  eskiden vardı, bunu kaldırdım */
+  justify-content: space-between; /* domain adı solda, butonlar sağda */
   align-items: center;
-  gap: 5px; /* butonlar arası boşluk */
+}
+
+/* Butonları gruplayan kapsayıcı - sağdaki butonlar için */
+.domain-header .button-group {
+  display: flex;
+  gap: 5px;
+  align-items: center;
 }
 
 .subdomain-list {
@@ -56,15 +63,15 @@ h1 {
 
 .subdomain-list li {
   display: flex;
+  justify-content: space-between;
   align-items: center;
-  gap: 5px; /* butonlar arası boşluk */
   padding: 3px 0;
 }
 
 /* Sil ve Düzenle butonlarının ortak stilleri */
 .domain-header button,
 .subdomain-list button {
-  background-color: yellow;
+  background-color: #f0a500; /* turuncu-sarı */
   border: none;
   padding: 4px 10px;
   cursor: pointer;
@@ -79,7 +86,7 @@ h1 {
 /* Hover efekt */
 .domain-header button:hover,
 .subdomain-list button:hover {
-  background-color: gold;
+  background-color: #d18e00; /* biraz koyu turuncu */
 }
 
 /* Sil butonları için kırmızı arka plan */
@@ -89,5 +96,14 @@ h1 {
   color: white;
 }
 
-/* Eğer istersen sil ve düzenle butonları yan yana olacak şekilde buradaki gap ile ayar yapabilirsin */
-/* Ama domain-header ve subdomain-list li elemanlarında gap ile zaten yapıldı */
+/* Subdomainlerde butonlar yan yana ve sağda */
+.subdomain-list li > div {
+  display: flex;
+  gap: 5px;
+  align-items: center;
+}
+
+/* Subdomain ismi solda, butonlar sağda */
+.subdomain-list li span {
+  flex-grow: 1;
+}

@@ -8,14 +8,13 @@ function App() {
   const [domainInput, setDomainInput] = useState("");
   const [subdomainsInput, setSubdomainsInput] = useState("");
 
-  // Düzenleme için eklenen state'ler
   const [editingDomainId, setEditingDomainId] = useState(null);
   const [editingDomainValue, setEditingDomainValue] = useState("");
 
   const [editingSubdomainInfo, setEditingSubdomainInfo] = useState({ domainId: null, index: null });
   const [editingSubdomainValue, setEditingSubdomainValue] = useState("");
 
-  const API_URL = "https://searchappbackend.onrender.com"; // backend adresin
+  const API_URL = "https://searchappbackend.onrender.com";
 
   useEffect(() => {
     fetchDomains();
@@ -79,24 +78,19 @@ function App() {
     }
   };
 
-  // --- Düzenleme işlemleri ---
-
-  // Domain düzenlemeyi başlat
+  // Düzenleme işlemleri
   const startEditingDomain = (id, currentValue) => {
     setEditingDomainId(id);
     setEditingDomainValue(currentValue);
   };
 
-  // Domain düzenlemeyi iptal et
   const cancelEditingDomain = () => {
     setEditingDomainId(null);
     setEditingDomainValue("");
   };
 
-  // Domain düzenlemeyi kaydet (backend güncellemesini backend tarafında yapacaksın)
   const saveEditingDomain = async (id) => {
     try {
-      // Backend endpoint'i kendin yazacaksın:
       await axios.patch(`${API_URL}/domains/${id}/update-domain`, {
         newDomain: editingDomainValue.trim()
       });
@@ -108,22 +102,18 @@ function App() {
     }
   };
 
-  // Subdomain düzenlemeyi başlat
   const startEditingSubdomain = (domainId, index, currentValue) => {
     setEditingSubdomainInfo({ domainId, index });
     setEditingSubdomainValue(currentValue);
   };
 
-  // Subdomain düzenlemeyi iptal et
   const cancelEditingSubdomain = () => {
     setEditingSubdomainInfo({ domainId: null, index: null });
     setEditingSubdomainValue("");
   };
 
-  // Subdomain düzenlemeyi kaydet
   const saveEditingSubdomain = async (domainId, oldValue) => {
     try {
-      // Backend tarafında bu endpoint'i yazacaksın:
       await axios.patch(`${API_URL}/domains/${domainId}/update-subdomain`, {
         oldSubdomain: oldValue,
         newSubdomain: editingSubdomainValue.trim()
@@ -136,7 +126,6 @@ function App() {
     }
   };
 
-  // Filtreleme
   const filteredDomains = domains.filter(d => {
     const search = searchTerm.toLowerCase();
     return (
@@ -183,17 +172,22 @@ function App() {
                     value={editingDomainValue}
                     onChange={(e) => setEditingDomainValue(e.target.value)}
                   />
-                  <button onClick={() => saveEditingDomain(d._id)}>Kaydet</button>
-                  <button onClick={cancelEditingDomain}>İptal</button>
+                  <div className="button-group">
+                    <button onClick={() => saveEditingDomain(d._id)}>Kaydet</button>
+                    <button onClick={cancelEditingDomain}>İptal</button>
+                  </div>
                 </>
               ) : (
                 <>
                   <strong>{d.domain}</strong>
-                  <button onClick={() => startEditingDomain(d._id, d.domain)}>Düzenle</button>
-                  <button className="delete" onClick={() => handleDeleteDomain(d._id)}>Sil</button>
+                  <div className="button-group">
+                    <button onClick={() => startEditingDomain(d._id, d.domain)}>Düzenle</button>
+                    <button className="delete" onClick={() => handleDeleteDomain(d._id)}>Sil</button>
+                  </div>
                 </>
               )}
             </div>
+
             <ul className="subdomain-list">
               {d.subdomains.map((s, idx) => (
                 <li key={idx}>
@@ -204,14 +198,18 @@ function App() {
                         value={editingSubdomainValue}
                         onChange={(e) => setEditingSubdomainValue(e.target.value)}
                       />
-                      <button onClick={() => saveEditingSubdomain(d._id, s)}>Kaydet</button>
-                      <button onClick={cancelEditingSubdomain}>İptal</button>
+                      <div className="button-group">
+                        <button onClick={() => saveEditingSubdomain(d._id, s)}>Kaydet</button>
+                        <button onClick={cancelEditingSubdomain}>İptal</button>
+                      </div>
                     </>
                   ) : (
                     <>
-                      {s}
-                      <button onClick={() => startEditingSubdomain(d._id, idx, s)}>Düzenle</button>
-                      <button className="delete-sub" onClick={() => handleDeleteSubdomain(d._id, s)}>Sil</button>
+                      <span>{s}</span>
+                      <div className="button-group">
+                        <button onClick={() => startEditingSubdomain(d._id, idx, s)}>Düzenle</button>
+                        <button className="delete-sub" onClick={() => handleDeleteSubdomain(d._id, s)}>Sil</button>
+                      </div>
                     </>
                   )}
                 </li>
