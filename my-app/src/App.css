@@ -44,8 +44,9 @@ h1 {
 
 .domain-header {
   display: flex;
-  justify-content: space-between;
+  /* justify-content: space-between;  eskiden vardı, bunu kaldırdım */
   align-items: center;
+  gap: 5px; /* butonlar arası boşluk */
 }
 
 .subdomain-list {
@@ -55,16 +56,38 @@ h1 {
 
 .subdomain-list li {
   display: flex;
-  justify-content: space-between;
+  align-items: center;
+  gap: 5px; /* butonlar arası boşluk */
   padding: 3px 0;
 }
 
-.delete,
-.delete-sub {
-  background-color: #dc3545;
+/* Sil ve Düzenle butonlarının ortak stilleri */
+.domain-header button,
+.subdomain-list button {
+  background-color: yellow;
   border: none;
-  color: white;
-  padding: 4px 8px;
+  padding: 4px 10px;
   cursor: pointer;
+  height: 30px;
+  line-height: 1;
+  font-weight: bold;
+  border-radius: 4px;
+  transition: background-color 0.2s ease;
   font-size: 12px;
 }
+
+/* Hover efekt */
+.domain-header button:hover,
+.subdomain-list button:hover {
+  background-color: gold;
+}
+
+/* Sil butonları için kırmızı arka plan */
+.delete,
+.delete-sub {
+  background-color: #dc3545 !important;
+  color: white;
+}
+
+/* Eğer istersen sil ve düzenle butonları yan yana olacak şekilde buradaki gap ile ayar yapabilirsin */
+/* Ama domain-header ve subdomain-list li elemanlarında gap ile zaten yapıldı */
